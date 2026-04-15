@@ -4,30 +4,13 @@ on:
   push:
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  setup:
-    name: Setup (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y cmake gcc g++ gfortran
-
-      - name: Verify tool versions
-        run: |
-          cmake --version
-          gcc --version
-          g++ --version
-          gfortran --version
-
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: setup
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -37,13 +20,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y cmake gcc g++ gfortran
+          sudo apt-get install -y cmake gcc g++ gfortran ninja-build
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
