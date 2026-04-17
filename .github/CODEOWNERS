@@ -1,21 +1,21 @@
 # For all files
-* @nB4tXcollab/zolpz-iter-approvers
+* @nB4tXorg/zolpz-iter-approvers
 
 # License changes need to be checked generally
-LICENSE @nB4tXcollab/general-approvers
+LICENSE @nB4tXorg/general-approvers
 
-# License changes need to be checked generally
-tests/ @nB4tXcollab/zolpz-iter-testers
+# Test changes need to be checked by testers
+tests/ @nB4tXorg/zolpz-iter-testers
 
 # Documentation changes are less stringent
-README @nB4tXcollab/zolpz-iter-reviewers
-*.md @nB4tXcollab/zolpz-iter-reviewers
+README @nB4tXorg/zolpz-iter-reviewers
+*.md @nB4tXorg/zolpz-iter-reviewers
 
 # Team setup
-# @nB4tXcollab/nB4tXorg-general
-# |-- @nB4tXcollab/general-approvers
-# |   |-- @nB4tXcollab/zolpz-iter-approvers
+# @nB4tXorg/nB4tXorg-general
+# |-- @nB4tXorg/general-approvers
+# |   |-- @nB4tXorg/zolpz-iter-approvers
 # |
-# |-- @nB4tXcollab/general-reviewers
-#     |-- @nB4tXcollab/zolpz-iter-reviewers
+# |-- @nB4tXorg/general-reviewers
+#     |-- @nB4tXorg/zolpz-iter-reviewers
 #
