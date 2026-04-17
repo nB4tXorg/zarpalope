@@ -4,6 +4,9 @@
 # License changes need to be checked generally
 LICENSE @nB4tXcollab/general-approvers
 
+# License changes need to be checked generally
+tests/ @nB4tXcollab/zolpz-iter-testers
+
 # Documentation changes are less stringent
 README @nB4tXcollab/zolpz-iter-reviewers
 *.md @nB4tXcollab/zolpz-iter-reviewers
