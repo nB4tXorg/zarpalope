@@ -1,6 +1,18 @@
 # For all files
-* @nB4tXcollab/ZOLPZ-ITER-approvers
+* @nB4tXcollab/zolpz-iter-approvers
 
-[Documentation] @nB4tXcollab/ZOLPZ-ITER-docs-approvers
-docs/
-README.md
+# License changes need to be checked generally
+LICENSE @nB4tXcollab/general-approvers
+
+# Documentation changes are less stringent
+README @nB4tXcollab/zolpz-iter-reviewers
+*.md @nB4tXcollab/zolpz-iter-reviewers
+
+# Team setup
+# @nB4tXcollab/nB4tXorg-general
+# |-- @nB4tXcollab/general-approvers
+# |   |-- @nB4tXcollab/zolpz-iter-approvers
+# |
+# |-- @nB4tXcollab/general-reviewers
+#     |-- @nB4tXcollab/zolpz-iter-reviewers
+#
