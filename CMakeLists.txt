@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ZOLPZ_ITER
+project(zarpalope
     VERSION 0.1.0
     LANGUAGES CXX Fortran
 )

@@ -1,4 +1,4 @@
-# ZOLPZ-ITER
+# zarpalope
 
 A CMake boilerplate project demonstrating a mixed C++ and Fortran build.
 
