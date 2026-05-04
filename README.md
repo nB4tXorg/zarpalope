@@ -71,7 +71,7 @@ pick it up.
    `ci/pr-<PR-number>` in *this* repository to the PR's current head SHA.
 4. Your internal CI (Bamboo, etc.) watches that branch and starts a build.
 
-> **Who can trigger it?**  Only GitHub usernames listed in the `ALLOWLIST`
-> inside the workflow file.  Edit `.github/workflows/ci-update.yml` to add or
+> **Who can trigger it?** Only GitHub usernames listed in the `ALLOWLIST`
+> inside the workflow file. Edit `.github/workflows/ci-update.yml` to add or
 > remove team members.
 
