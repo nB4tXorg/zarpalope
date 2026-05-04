@@ -1,0 +1,189 @@
+# CI Update Workflow
+#
+# Usage
+# -----
+# Comment `/ci update` on any pull request.
+# The workflow will create (or force-update) a branch named `ci/pr-<number>`
+# in this repository pointing at the HEAD commit of the PR's source branch.
+# That branch can then be built by downstream CI (e.g. Bamboo) which can only
+# watch branches in the main repository and cannot see fork PRs directly.
+#
+# Only users listed in the `ALLOWLIST` below are permitted to trigger this
+# workflow.  Edit the list to add or remove team members.
+#
+# Permissions required
+# --------------------
+# The workflow uses the built-in GITHUB_TOKEN.  It needs `contents: write` to
+# create/update refs, and `pull-requests: read` / `issues: read` to read PR
+# metadata from the API.  These are declared explicitly below.
+#
+# Fork PRs
+# --------
+# The workflow fetches the PR's head SHA from the GitHub API and then calls
+# the refs API directly on the *base* repository.  No checkout is performed,
+# so cross-fork updates work as long as the GITHUB_TOKEN has write access to
+# the base repo (which it always does for the built-in token).
+
+name: CI – update branch on PR comment
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write      # needed to create/update refs
+  pull-requests: read  # needed to read PR metadata
+  issues: read         # needed to read comment metadata
+
+jobs:
+  ci-update:
+    # Only run when the comment is on a pull request (not a plain issue).
+    if: github.event.issue.pull_request != null
+
+    runs-on: ubuntu-latest
+
+    env:
+      # -----------------------------------------------------------------------
+      # ALLOWLIST – GitHub usernames permitted to trigger this workflow.
+      # One username per line (or space-separated).  Edit freely.
+      # -----------------------------------------------------------------------
+      ALLOWLIST: |
+        Louwrensth
+        octocat
+        another-trusted-user
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Guard: check the comment body
+      # -----------------------------------------------------------------------
+      - name: Check command
+        id: check_command
+        run: |
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          # Trim leading/trailing whitespace for a robust comparison
+          TRIMMED="$(echo "${COMMENT_BODY}" | xargs)"
+          if [ "${TRIMMED}" = "/ci update" ]; then
+            echo "command_ok=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Comment matches /ci update"
+          else
+            echo "command_ok=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ Comment does not match /ci update – skipping."
+          fi
+
+      # -----------------------------------------------------------------------
+      # 2. Guard: check the commenter is in the allowlist
+      # -----------------------------------------------------------------------
+      - name: Check allowlist
+        id: check_allowlist
+        if: steps.check_command.outputs.command_ok == 'true'
+        run: |
+          ACTOR="${{ github.event.comment.user.login }}"
+          echo "Commenter: ${ACTOR}"
+          ALLOWED=false
+          while IFS= read -r entry; do
+            entry="$(echo "${entry}" | xargs)"   # trim whitespace
+            [ -z "${entry}" ] && continue
+            if [ "${entry}" = "${ACTOR}" ]; then
+              ALLOWED=true
+              break
+            fi
+          done <<< "${ALLOWLIST}"
+
+          if [ "${ALLOWED}" = "true" ]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ ${ACTOR} is in the allowlist."
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "🚫 ${ACTOR} is NOT in the allowlist – skipping."
+          fi
+
+      # -----------------------------------------------------------------------
+      # 3. Fetch PR metadata (head SHA, head ref, base repo) via GitHub API
+      # -----------------------------------------------------------------------
+      - name: Fetch PR metadata
+        id: pr_meta
+        if: |
+          steps.check_command.outputs.command_ok == 'true' &&
+          steps.check_allowlist.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.issue.number }}"
+          echo "PR number: ${PR_NUMBER}"
+
+          # Call the GitHub REST API to get the PR details.
+          PR_JSON="$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}")"
+
+          HEAD_SHA="$(echo "${PR_JSON}" | jq -r '.head.sha')"
+          HEAD_LABEL="$(echo "${PR_JSON}" | jq -r '.head.label')"   # e.g. fork:branch
+          BASE_REPO="$(echo "${PR_JSON}" | jq -r '.base.repo.full_name')"
+
+          echo "PR head SHA   : ${HEAD_SHA}"
+          echo "PR head label : ${HEAD_LABEL}"
+          echo "Base repo     : ${BASE_REPO}"
+
+          # Safety: ensure we got a real SHA (40 hex chars)
+          if ! echo "${HEAD_SHA}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "❌ Failed to retrieve a valid head SHA from the API."
+            exit 1
+          fi
+
+          TARGET_REF="refs/heads/ci/pr-${PR_NUMBER}"
+          echo "Target ref    : ${TARGET_REF}"
+
+          echo "pr_number=${PR_NUMBER}"   >> "$GITHUB_OUTPUT"
+          echo "head_sha=${HEAD_SHA}"     >> "$GITHUB_OUTPUT"
+          echo "target_ref=${TARGET_REF}" >> "$GITHUB_OUTPUT"
+          echo "base_repo=${BASE_REPO}"   >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # 4. Create or force-update the ci/pr-<number> branch via GitHub API
+      #    This uses the Refs API and does NOT require a git checkout, so it
+      #    works for PRs from forks just as well as same-repo branches.
+      # -----------------------------------------------------------------------
+      - name: Create or update ci branch
+        if: |
+          steps.check_command.outputs.command_ok == 'true' &&
+          steps.check_allowlist.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr_meta.outputs.pr_number }}"
+          HEAD_SHA="${{ steps.pr_meta.outputs.head_sha }}"
+          TARGET_REF="${{ steps.pr_meta.outputs.target_ref }}"
+          BASE_REPO="${{ steps.pr_meta.outputs.base_repo }}"
+
+          echo "──────────────────────────────────────────"
+          echo "PR number  : ${PR_NUMBER}"
+          echo "Head SHA   : ${HEAD_SHA}"
+          echo "Target ref : ${TARGET_REF}"
+          echo "Base repo  : ${BASE_REPO}"
+          echo "──────────────────────────────────────────"
+
+          # Check whether the ref already exists.
+          HTTP_STATUS="$(gh api \
+            --silent \
+            -X GET \
+            "repos/${BASE_REPO}/git/${TARGET_REF}" \
+            -H "Accept: application/vnd.github+json" \
+            --jq '.ref' 2>/dev/null && echo "exists" || echo "missing")"
+
+          if [ "${HTTP_STATUS}" = "exists" ]; then
+            echo "🔄 Ref exists – force-updating to ${HEAD_SHA} …"
+            gh api \
+              -X PATCH \
+              "repos/${BASE_REPO}/git/${TARGET_REF}" \
+              -H "Accept: application/vnd.github+json" \
+              -f sha="${HEAD_SHA}" \
+              -F force=true
+            echo "✅ Branch ${TARGET_REF} updated."
+          else
+            echo "🆕 Ref does not exist – creating ${TARGET_REF} at ${HEAD_SHA} …"
+            gh api \
+              -X POST \
+              "repos/${BASE_REPO}/git/refs" \
+              -H "Accept: application/vnd.github+json" \
+              -f ref="${TARGET_REF}" \
+              -f sha="${HEAD_SHA}"
+            echo "✅ Branch ${TARGET_REF} created."
+          fi

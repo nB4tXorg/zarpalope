@@ -51,3 +51,27 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+## CI branch update (for Bamboo / internal CI)
+
+The repository ships a helper workflow (`.github/workflows/ci-update.yml`) that
+lets authorised contributors mirror a PR's head commit into a stable branch so
+that downstream CI systems that cannot observe fork PRs (e.g. Bamboo) can still
+pick it up.
+
+**How to use it**
+
+1. Open (or review) a pull request.
+2. Post a comment containing exactly:
+
+   ```
+   /ci update
+   ```
+
+3. The workflow will create or force-update the branch
+   `ci/pr-<PR-number>` in *this* repository to the PR's current head SHA.
+4. Your internal CI (Bamboo, etc.) watches that branch and starts a build.
+
+> **Who can trigger it?**  Only GitHub usernames listed in the `ALLOWLIST`
+> inside the workflow file.  Edit `.github/workflows/ci-update.yml` to add or
+> remove team members.
+
