@@ -165,7 +165,7 @@ jobs:
             -X GET \
             "repos/${BASE_REPO}/git/${TARGET_REF}" \
             -H "Accept: application/vnd.github+json" \
-            --jq '.ref' 2>/dev/null && echo "exists" || echo "missing")"
+            2>/dev/null && echo "exists" || echo "missing")"
 
           if [ "${REF_STATUS}" = "exists" ]; then
             echo "🔄 Ref exists – force-updating to ${HEAD_SHA} …"
