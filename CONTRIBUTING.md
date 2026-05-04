@@ -1,6 +1,6 @@
 # Contributing to zarpalope
 
-Thanks for taking the time to contribute!
+Thanks for taking the time to contribute!!
 
 This repository is a (currently) lightweight / "fake project" repo. The guidelines below are intentionally simple and should work well for a CMake + C++ + Fortran codebase.
 
